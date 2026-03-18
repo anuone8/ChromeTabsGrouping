@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=400">
+  <title>Tab Grouper</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+      --bg-primary: #0e1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #1c2333;
+      --bg-hover: #242d3d;
+      --border: #2a3444;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #545d68;
+      --accent: #58a6ff;
+      --accent-glow: rgba(88, 166, 255, 0.15);
+      --success: #3fb950;
+      --danger: #f85149;
+      --warning: #d29922;
+
+      /* group colors */
+      --g-blue: #58a6ff;
+      --g-red: #f85149;
+      --g-yellow: #d29922;
+      --g-green: #3fb950;
+      --g-pink: #db61a2;
+      --g-purple: #bc8cff;
+      --g-cyan: #39d2c0;
+      --g-orange: #f0883e;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 380px;
+      max-height: 560px;
+      overflow-y: auto;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    body::-webkit-scrollbar { width: 6px; }
+    body::-webkit-scrollbar-track { background: transparent; }
+    body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ─── Header ─── */
+    .header {
+      padding: 16px 18px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-secondary);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--accent), var(--g-purple));
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+
+    .header h1 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .tab-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    /* ─── Auto-group toggle ─── */
+    .auto-toggle-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 18px;
+      background: linear-gradient(135deg, rgba(63,185,80,0.08), rgba(88,166,255,0.06));
+      border-bottom: 1px solid var(--border);
+    }
+
+    .auto-toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .auto-toggle-label .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    .auto-toggle-label .dot.off {
+      background: var(--text-muted);
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .auto-toggle-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 38px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .toggle-switch input { display: none; }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: all 0.2s;
+    }
+
+    .toggle-switch input:checked + .toggle-track {
+      background: var(--success);
+      border-color: var(--success);
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 14px; height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      pointer-events: none;
+    }
+
+    .toggle-switch input:checked ~ .toggle-thumb {
+      transform: translateX(18px);
+    }
+
+    /* ─── Quick Actions ─── */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .qbtn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .qbtn:hover {
+      background: var(--bg-hover);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-glow);
+    }
+
+    .qbtn:active { transform: scale(0.97); }
+
+    .qbtn.primary {
+      background: linear-gradient(135deg, rgba(88,166,255,0.12), rgba(188,140,255,0.08));
+      border-color: rgba(88,166,255,0.3);
+    }
+
+    .qbtn.primary:hover {
+      background: linear-gradient(135deg, rgba(88,166,255,0.2), rgba(188,140,255,0.14));
+    }
+
+    .qbtn.danger:hover {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 1px rgba(248,81,73,0.15);
+    }
+
+    .qbtn svg { flex-shrink: 0; }
+
+    /* ─── Sections ─── */
+    .section {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+    }
+
+    /* ─── Existing Groups ─── */
+    .group-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-bottom: 4px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      transition: all 0.12s ease;
+    }
+
+    .group-item:hover { background: var(--bg-hover); }
+
+    .group-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .group-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .group-name {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .group-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      padding: 1px 6px;
+      border-radius: 6px;
+    }
+
+    .group-actions {
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.12s;
+    }
+
+    .group-item:hover .group-actions { opacity: 1; }
+
+    .icon-btn {
+      width: 26px; height: 26px;
+      display: grid;
+      place-items: center;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--border);
+      color: var(--text-primary);
+    }
+
+    .icon-btn.del:hover {
+      color: var(--danger);
+      border-color: rgba(248,81,73,0.3);
+    }
+
+    /* ─── Tab List ─── */
+    .tab-list { max-height: 220px; overflow-y: auto; }
+    .tab-list::-webkit-scrollbar { width: 4px; }
+    .tab-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .tab-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      user-select: none;
+    }
+
+    .tab-item:hover { background: var(--bg-hover); }
+
+    .tab-item.selected {
+      background: var(--accent-glow);
+      outline: 1px solid rgba(88,166,255,0.25);
+    }
+
+    .tab-checkbox {
+      width: 16px; height: 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 4px;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      transition: all 0.12s;
+    }
+
+    .tab-item.selected .tab-checkbox {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .tab-item.selected .tab-checkbox::after {
+      content: '';
+      width: 8px; height: 5px;
+      border-left: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      transform: rotate(-45deg) translateY(-1px);
+    }
+
+    .tab-favicon {
+      width: 16px; height: 16px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      object-fit: contain;
+    }
+
+    .tab-favicon-placeholder {
+      width: 16px; height: 16px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      background: var(--bg-tertiary);
+      display: grid;
+      place-items: center;
+      font-size: 9px;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .tab-title {
+      flex: 1;
+      font-size: 12.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text-primary);
+    }
+
+    .tab-domain {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    /* ─── Create Group Panel ─── */
+    .create-panel {
+      display: none;
+      padding: 12px 18px 14px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      position: sticky;
+      bottom: 0;
+    }
+
+    .create-panel.visible { display: block; }
+
+    .create-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .create-input {
+      flex: 1;
+      padding: 8px 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.12s;
+    }
+
+    .create-input:focus { border-color: var(--accent); }
+    .create-input::placeholder { color: var(--text-muted); }
+
+    .color-picker {
+      display: flex;
+      gap: 5px;
+    }
+
+    .color-swatch {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.12s;
+      transform: scale(0.85);
+    }
+
+    .color-swatch:hover { transform: scale(1); }
+    .color-swatch.active {
+      border-color: var(--text-primary);
+      transform: scale(1);
+      box-shadow: 0 0 6px rgba(255,255,255,0.15);
+    }
+
+    .create-btn {
+      width: 100%;
+      padding: 9px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .create-btn:hover { filter: brightness(1.1); }
+    .create-btn:active { transform: scale(0.98); }
+    .create-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* ─── Empty State ─── */
+    .empty {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    /* ─── Toast ─── */
+    .toast {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%) translateY(40px);
+      background: var(--success);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0;
+      transition: all 0.25s ease;
+      pointer-events: none;
+      z-index: 100;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .select-all-btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .select-all-btn:hover { text-decoration: underline; }
+
+    .selection-info {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">TG</div>
+      <h1>Tab Grouper</h1>
+    </div>
+    <span class="tab-count" id="tabCount">0 tabs</span>
+  </div>
+
+  <!-- Auto-Group Toggle -->
+  <div class="auto-toggle-bar">
+    <div>
+      <div class="auto-toggle-label">
+        <span class="dot" id="autoDot"></span>
+        Auto-group new tabs
+      </div>
+      <div class="auto-toggle-hint">Groups tabs by domain as you browse</div>
+    </div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="autoGroupToggle" checked>
+      <div class="toggle-track"></div>
+      <div class="toggle-thumb"></div>
+    </label>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions">
+    <button class="qbtn primary" id="btnGroupByDomain">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
+      Group by Domain
+    </button>
+    <button class="qbtn" id="btnCollapseAll">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Collapse All
+    </button>
+    <button class="qbtn" id="btnExpandAll">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 10l4-4 4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Expand All
+    </button>
+    <button class="qbtn danger" id="btnUngroupAll">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Ungroup All
+    </button>
+  </div>
+
+  <!-- Existing Groups -->
+  <div class="section" id="groupsSection" style="display:none;">
+    <div class="section-header">
+      <span class="section-title">Active Groups</span>
+    </div>
+    <div id="groupsList"></div>
+  </div>
+
+  <!-- Tab Selection -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-title">Select Tabs to Group</span>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span class="selection-info" id="selectionInfo"></span>
+        <button class="select-all-btn" id="btnSelectAll">Select All</button>
+      </div>
+    </div>
+    <div class="tab-list" id="tabList"></div>
+  </div>
+
+  <!-- Create Group Panel -->
+  <div class="create-panel" id="createPanel">
+    <div class="create-row">
+      <input type="text" class="create-input" id="groupNameInput" placeholder="Group name..." maxlength="30">
+    </div>
+    <div class="create-row">
+      <div class="color-picker" id="colorPicker">
+        <div class="color-swatch active" data-color="blue" style="background:var(--g-blue)"></div>
+        <div class="color-swatch" data-color="red" style="background:var(--g-red)"></div>
+        <div class="color-swatch" data-color="yellow" style="background:var(--g-yellow)"></div>
+        <div class="color-swatch" data-color="green" style="background:var(--g-green)"></div>
+        <div class="color-swatch" data-color="pink" style="background:var(--g-pink)"></div>
+        <div class="color-swatch" data-color="purple" style="background:var(--g-purple)"></div>
+        <div class="color-swatch" data-color="cyan" style="background:var(--g-cyan)"></div>
+        <div class="color-swatch" data-color="orange" style="background:var(--g-orange)"></div>
+      </div>
+    </div>
+    <button class="create-btn" id="btnCreate" disabled>Create Group</button>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
